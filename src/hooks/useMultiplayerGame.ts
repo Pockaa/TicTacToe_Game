@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Board, Player, CellValue, Scores } from '../types';
+import { Board, Player, CellValue, Scores, MoveEntry } from '../types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 const EMPTY_BOARD: Board = [null, null, null, null, null, null, null, null, null];
@@ -63,7 +63,7 @@ export interface MultiplayerActions {
     leaveRoom: () => void;
 }
 
-export function useMultiplayerGame(): MultiplayerActions {
+export function useMultiplayerGame(onGameEnd?: (winner: Player | null, isDraw: boolean, moves: MoveEntry[]) => void): MultiplayerActions {
     const [board, setBoard] = useState<Board>(EMPTY_BOARD);
     const [currentPlayer, setCurrentPlayer] = useState<Player>('X');
     const [winner, setWinner] = useState<Player | null>(null);
@@ -74,10 +74,16 @@ export function useMultiplayerGame(): MultiplayerActions {
     const [status, setStatus] = useState<ConnectionStatus>('disconnected');
     const [scores, setScores] = useState<Scores>({ X: 0, O: 0, draws: 0 });
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    // Tracks who goes first — alternates each game
+    const [firstPlayer, setFirstPlayer] = useState<Player>('X');
+    // Move log for history
+    const [moveLog, setMoveLog] = useState<MoveEntry[]>([]);
+    const gameEndedRef = useRef(false);
 
     const channelRef = useRef<RealtimeChannel | null>(null);
     const playerIdRef = useRef<string>(generatePlayerId());
     const roomIdRef = useRef<string | null>(null);
+    const moveLogRef = useRef<MoveEntry[]>([]);
 
     // Clean up subscription on unmount
     useEffect(() => {
@@ -106,9 +112,27 @@ export function useMultiplayerGame(): MultiplayerActions {
                 },
                 (payload) => {
                     const data = payload.new as any;
+                    const oldData = payload.old as any;
                     const newBoard = data.board as Board;
                     const newWinner = checkWinner(newBoard);
                     const newIsDraw = checkDraw(newBoard, newWinner);
+
+                    // Detect opponent's move by comparing boards
+                    const prevBoard = oldData?.board as Board | undefined;
+                    if (prevBoard && newBoard) {
+                        for (let i = 0; i < 9; i++) {
+                            if (prevBoard[i] === null && newBoard[i] !== null) {
+                                const move: MoveEntry = {
+                                    player: newBoard[i] as Player,
+                                    position: i,
+                                    moveNumber: moveLogRef.current.length + 1,
+                                };
+                                moveLogRef.current = [...moveLogRef.current, move];
+                                setMoveLog(moveLogRef.current);
+                                break;
+                            }
+                        }
+                    }
 
                     setBoard(newBoard);
                     setCurrentPlayer(data.current_player as Player);
@@ -116,14 +140,30 @@ export function useMultiplayerGame(): MultiplayerActions {
                     setIsDraw(newIsDraw);
                     setGameOver(data.game_over);
 
+                    // If the board was reset, sync the first player and clear move log
+                    if (newBoard.every(cell => cell === null) && !data.game_over) {
+                        setFirstPlayer(data.current_player as Player);
+                        setMoveLog([]);
+                        moveLogRef.current = [];
+                        gameEndedRef.current = false;
+                    }
+
                     if (data.status === 'playing') {
                         setStatus('playing');
                     }
 
                     if (newWinner) {
                         setScores(s => ({ ...s, [newWinner]: s[newWinner as 'X' | 'O'] + 1 }));
+                        if (!gameEndedRef.current) {
+                            gameEndedRef.current = true;
+                            onGameEnd?.(newWinner, false, moveLogRef.current);
+                        }
                     } else if (newIsDraw) {
                         setScores(s => ({ ...s, draws: s.draws + 1 }));
+                        if (!gameEndedRef.current) {
+                            gameEndedRef.current = true;
+                            onGameEnd?.(null, true, moveLogRef.current);
+                        }
                     }
                 }
             )
@@ -232,6 +272,11 @@ export function useMultiplayerGame(): MultiplayerActions {
         const nextPlayer: Player = currentPlayer === 'X' ? 'O' : 'X';
         const newGameOver = newWinner !== null || newIsDraw;
 
+        // Track the move
+        const newMoveLog = [...moveLog, { player: currentPlayer, position: index, moveNumber: moveLog.length + 1 } as MoveEntry];
+        setMoveLog(newMoveLog);
+        moveLogRef.current = newMoveLog;
+
         // Optimistic update
         setBoard(newBoard);
         setCurrentPlayer(nextPlayer);
@@ -240,10 +285,18 @@ export function useMultiplayerGame(): MultiplayerActions {
             setWinner(newWinner);
             setGameOver(true);
             setScores(s => ({ ...s, [newWinner]: s[newWinner as 'X' | 'O'] + 1 }));
+            if (!gameEndedRef.current) {
+                gameEndedRef.current = true;
+                onGameEnd?.(newWinner, false, newMoveLog);
+            }
         } else if (newIsDraw) {
             setIsDraw(true);
             setGameOver(true);
             setScores(s => ({ ...s, draws: s.draws + 1 }));
+            if (!gameEndedRef.current) {
+                gameEndedRef.current = true;
+                onGameEnd?.(null, true, newMoveLog);
+            }
         }
 
         // Push to Supabase
@@ -259,24 +312,30 @@ export function useMultiplayerGame(): MultiplayerActions {
                 updated_at: new Date().toISOString(),
             })
             .eq('id', roomIdRef.current);
-    }, [board, currentPlayer, gameOver, myPlayer]);
+    }, [board, currentPlayer, gameOver, myPlayer, moveLog, onGameEnd]);
 
     const resetGame = useCallback(async () => {
         if (!roomIdRef.current) return;
 
         const newBoard = EMPTY_BOARD;
+        // Alternate who goes first
+        const nextFirstPlayer: Player = firstPlayer === 'X' ? 'O' : 'X';
 
         setBoard(newBoard);
-        setCurrentPlayer('X');
+        setCurrentPlayer(nextFirstPlayer);
+        setFirstPlayer(nextFirstPlayer);
         setWinner(null);
         setIsDraw(false);
         setGameOver(false);
+        setMoveLog([]);
+        moveLogRef.current = [];
+        gameEndedRef.current = false;
 
         await supabase
             .from('game_rooms')
             .update({
                 board: newBoard,
-                current_player: 'X',
+                current_player: nextFirstPlayer,
                 winner: null,
                 is_draw: false,
                 game_over: false,
@@ -284,7 +343,7 @@ export function useMultiplayerGame(): MultiplayerActions {
                 updated_at: new Date().toISOString(),
             })
             .eq('id', roomIdRef.current);
-    }, []);
+    }, [firstPlayer]);
 
     const leaveRoom = useCallback(() => {
         if (channelRef.current) {

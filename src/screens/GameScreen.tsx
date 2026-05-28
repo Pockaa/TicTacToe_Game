@@ -4,17 +4,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { Board } from '../components/Board';
 import { GameInfo } from '../components/GameInfo';
+import { useGameHistory } from '../context/GameHistoryContext';
+import { GameMode } from '../types';
 
 interface GameScreenProps {
     onBack?: () => void;
+    mode?: GameMode;
 }
 
-export function GameScreen({ onBack }: GameScreenProps): React.JSX.Element {
+export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.JSX.Element {
+    const { addLog } = useGameHistory();
+
     const { 
         gameState, handlePress, resetGame, statusMessage,
         scores, history, currentStep, undo, redo,
         isSinglePlayer, toggleSinglePlayer
-    } = useGameLogic();
+    } = useGameLogic({
+        mode,
+        onGameEnd: (winner, isDraw, moves) => {
+            addLog(mode, winner, isDraw, moves);
+        },
+    });
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -51,12 +61,14 @@ export function GameScreen({ onBack }: GameScreenProps): React.JSX.Element {
                     >
                         <Text style={styles.controlText}>Undo</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        onPress={toggleSinglePlayer} 
-                        style={[styles.controlBtn, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#e2e8f0' }]}
-                    >
-                        <Text style={styles.controlText}>{isSinglePlayer ? 'Play vs Human' : 'Play vs AI'}</Text>
-                    </TouchableOpacity>
+                    {mode === 'local' && (
+                        <TouchableOpacity 
+                            onPress={toggleSinglePlayer} 
+                            style={[styles.controlBtn, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#e2e8f0' }]}
+                        >
+                            <Text style={styles.controlText}>{isSinglePlayer ? 'Play vs Human' : 'Play vs AI'}</Text>
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity 
                         onPress={redo} 
                         disabled={currentStep === history.length - 1} 
@@ -70,6 +82,7 @@ export function GameScreen({ onBack }: GameScreenProps): React.JSX.Element {
                     statusMessage={statusMessage}
                     gameState={gameState}
                     onReset={resetGame}
+                    onBackToMenu={onBack}
                 />
 
                 <Board
@@ -79,7 +92,7 @@ export function GameScreen({ onBack }: GameScreenProps): React.JSX.Element {
                 />
 
                 <Text style={styles.footer}>
-                    {isSinglePlayer ? 'AI uses Minimax (Hard)' : 'PvP Mode'} • React Native + Expo
+                    {mode === 'ai' ? 'AI uses Minimax (Hard)' : 'Local PvP Mode'} • React Native + Expo
                 </Text>
 
                 {onBack && (

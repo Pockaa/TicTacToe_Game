@@ -31,3 +31,21 @@ export interface GameActions {
     isSinglePlayer: boolean;
     toggleSinglePlayer: () => void;
 }
+
+// History log types
+export interface MoveEntry {
+    player: Player;
+    position: number; // 0-8 cell index
+    moveNumber: number;
+}
+
+export type GameMode = 'local' | 'ai' | 'online';
+
+export interface GameLog {
+    id: string;
+    mode: GameMode;
+    winner: Player | null;
+    isDraw: boolean;
+    moves: MoveEntry[];
+    date: string; // ISO string
+}

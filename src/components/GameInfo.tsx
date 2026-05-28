@@ -6,9 +6,10 @@ interface GameInfoProps {
     statusMessage: string;
     gameState: GameState;
     onReset: () => void;
+    onBackToMenu?: () => void;
 }
 
-export const GameInfo: React.FC<GameInfoProps> = React.memo(({ statusMessage, gameState, onReset }) => {
+export const GameInfo: React.FC<GameInfoProps> = React.memo(({ statusMessage, gameState, onReset, onBackToMenu }) => {
     return (
         <View style={styles.container}>
             <Text
@@ -40,13 +41,24 @@ export const GameInfo: React.FC<GameInfoProps> = React.memo(({ statusMessage, ga
             )}
 
             {gameState.gameOver && (
-                <TouchableOpacity
-                    style={styles.resetButton}
-                    onPress={onReset}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.resetButtonText}>Play Again</Text>
-                </TouchableOpacity>
+                <View style={styles.gameOverActions}>
+                    <TouchableOpacity
+                        style={styles.resetButton}
+                        onPress={onReset}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={styles.resetButtonText}>Play Again</Text>
+                    </TouchableOpacity>
+                    {onBackToMenu && (
+                        <TouchableOpacity
+                            style={styles.menuButton}
+                            onPress={onBackToMenu}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.menuButtonText}>Main Menu</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             )}
         </View>
     );
@@ -138,5 +150,24 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         letterSpacing: 1,
         textTransform: 'uppercase',
+    },
+    gameOverActions: {
+        alignItems: 'center',
+        gap: 10,
+        marginTop: 10,
+    },
+    menuButton: {
+        backgroundColor: 'transparent',
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#64748B',
+    },
+    menuButtonText: {
+        color: '#94A3B8',
+        fontSize: 14,
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
 });

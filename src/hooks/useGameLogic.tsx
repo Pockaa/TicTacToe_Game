@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Board, GameState, GameActions, Player, CellValue, Scores } from '../types';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { Board, GameState, GameActions, Player, CellValue, Scores, MoveEntry, GameMode } from '../types';
 
 const WINNING_COMBINATIONS: readonly number[][] = [
     [0, 1, 2], // Top row
@@ -43,15 +43,24 @@ function checkDraw(moveCount: number, winner: Player | null): boolean {
     return moveCount === 9 && winner === null;
 }
 
-export function useGameLogic(): GameActions {
+interface UseGameLogicOptions {
+    mode?: GameMode;
+    onGameEnd?: (winner: Player | null, isDraw: boolean, moves: MoveEntry[]) => void;
+}
+
+export function useGameLogic(options?: UseGameLogicOptions): GameActions {
+    const mode = options?.mode ?? 'local';
+    const onGameEnd = options?.onGameEnd;
 
     const [scores, setScores] = useState<Scores>({ X: 0, O: 0, draws: 0 });
     const [history, setHistory] = useState<Board[]>([EMPTY_BOARD]);
     const [currentStep, setCurrentStep] = useState<number>(0);
-    const [isSinglePlayer, setIsSinglePlayer] = useState<boolean>(false);
+    const [isSinglePlayer, setIsSinglePlayer] = useState<boolean>(mode === 'ai');
+    const [moveLog, setMoveLog] = useState<MoveEntry[]>([]);
+    const gameEndedRef = useRef(false);
     
-    // Determine random starting player once per game initialization
-    const [startingPlayer, setStartingPlayer] = useState<Player>(() => Math.random() < 0.5 ? 'X' : 'O');
+    // First game always starts with X, then alternates each reset
+    const [startingPlayer, setStartingPlayer] = useState<Player>('X');
 
     const currentBoard = history[currentStep];
     const moveCount = currentStep;
@@ -73,6 +82,14 @@ export function useGameLogic(): GameActions {
         moveCount,
     };
 
+    // Log game when it ends
+    useEffect(() => {
+        if (gameOver && !gameEndedRef.current && moveLog.length > 0) {
+            gameEndedRef.current = true;
+            onGameEnd?.(winner, isDraw, moveLog);
+        }
+    }, [gameOver, winner, isDraw, moveLog, onGameEnd]);
+
     const handlePress = useCallback(
         (index: number): void => {
             if (gameOver || currentBoard[index] !== null) {
@@ -90,6 +107,9 @@ export function useGameLogic(): GameActions {
             const newHistory = [...history.slice(0, currentStep + 1), newBoard];
             setHistory(newHistory);
             setCurrentStep(newHistory.length - 1);
+
+            // Track the move
+            setMoveLog(prev => [...prev, { player: currentPlayer, position: index, moveNumber: prev.length + 1 }]);
 
             const newWinner = checkWinner(newBoard);
             const newIsDraw = checkDraw(newHistory.length - 1, newWinner);
@@ -110,6 +130,9 @@ export function useGameLogic(): GameActions {
         const newHistory = [...history.slice(0, currentStep + 1), newBoard];
         setHistory(newHistory);
         setCurrentStep(newHistory.length - 1);
+
+        // Track AI move
+        setMoveLog(prev => [...prev, { player: 'O', position: aiMove, moveNumber: prev.length + 1 }]);
 
         const newWinner = checkWinner(newBoard);
         const newIsDraw = checkDraw(newHistory.length - 1, newWinner);
@@ -136,7 +159,9 @@ export function useGameLogic(): GameActions {
     const resetGame = useCallback((): void => {
         setHistory([EMPTY_BOARD]);
         setCurrentStep(0);
-        setStartingPlayer(Math.random() < 0.5 ? 'X' : 'O');
+        setStartingPlayer(prev => prev === 'X' ? 'O' : 'X');
+        setMoveLog([]);
+        gameEndedRef.current = false;
     }, []);
 
     const undo = useCallback(() => {
@@ -156,7 +181,9 @@ export function useGameLogic(): GameActions {
         setHistory([EMPTY_BOARD]);
         setCurrentStep(0);
         setScores({ X: 0, O: 0, draws: 0 });
-        setStartingPlayer(Math.random() < 0.5 ? 'X' : 'O');
+        setStartingPlayer('X');
+        setMoveLog([]);
+        gameEndedRef.current = false;
     }, []);
 
     const statusMessage: string = useMemo((): string => {

@@ -83,14 +83,21 @@ export function MultiplayerGameScreen({ state, onPress, onReset, onLeave }: Mult
 
                 {/* Game Over Actions */}
                 {gameOver && (
-                    <TouchableOpacity style={styles.resetBtn} onPress={onReset}>
-                        <Text style={styles.resetBtnText}>Play Again</Text>
-                    </TouchableOpacity>
+                    <View style={styles.gameOverActions}>
+                        <TouchableOpacity style={styles.resetBtn} onPress={onReset}>
+                            <Text style={styles.resetBtnText}>Play Again</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuBtn} onPress={onLeave}>
+                            <Text style={styles.menuBtnText}>Main Menu</Text>
+                        </TouchableOpacity>
+                    </View>
                 )}
 
-                <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
-                    <Text style={styles.leaveBtnText}>Leave Room</Text>
-                </TouchableOpacity>
+                {!gameOver && (
+                    <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
+                        <Text style={styles.leaveBtnText}>Leave Room</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </SafeAreaView>
     );
@@ -247,6 +254,23 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '800',
         color: '#050B14',
+    },
+    gameOverActions: {
+        alignItems: 'center',
+        gap: 12,
+        marginTop: 16,
+    },
+    menuBtn: {
+        paddingVertical: 10,
+        paddingHorizontal: 24,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#64748B',
+    },
+    menuBtnText: {
+        fontSize: 14,
+        color: '#94A3B8',
+        fontWeight: '700',
     },
     leaveBtn: {
         marginTop: 20,
