@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { GlowBackground } from '../components/GlowBackground';
+import { Button } from '../components/Button';
 import { useGameHistory } from '../context/GameHistoryContext';
 import { GameLog, MoveEntry, GameMode } from '../types';
+import { colors, spacing, radius, typography } from '../theme';
 
 interface HistoryScreenProps {
     onBack: () => void;
@@ -23,13 +25,27 @@ function formatDate(iso: string): string {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function getResultLabel(log: GameLog): string {
+    if (!log.winner) {
+        return log.isDraw ? 'Draw' : 'Incomplete';
+    }
+    // In an AI game the AI is 'O' and the human is 'X'.
+    if (log.mode === 'ai') {
+        return log.winner === 'O' ? 'AI Won' : 'You Won';
+    }
+    return `Player ${log.winner} Won`;
+}
+
 function GameLogCard({ log, expanded, onToggle }: { log: GameLog; expanded: boolean; onToggle: () => void }): React.JSX.Element {
-    const result = log.winner ? `Player ${log.winner} Won` : log.isDraw ? 'Draw' : 'Incomplete';
-    const resultColor = log.winner === 'X' ? '#00E5FF' : log.winner === 'O' ? '#FF007F' : '#FBBF24';
+    const result = getResultLabel(log);
+    const resultColor = log.winner === 'X' ? colors.cyan : log.winner === 'O' ? colors.pink : colors.amber;
 
     return (
         <View style={styles.card}>
-            <TouchableOpacity style={styles.cardHeader} onPress={onToggle} activeOpacity={0.7}>
+            <Pressable
+                style={({ pressed }) => [styles.cardHeader, pressed && styles.cardHeaderPressed]}
+                onPress={onToggle}
+            >
                 <View style={styles.cardHeaderLeft}>
                     <Text style={[styles.resultText, { color: resultColor }]}>{result}</Text>
                     <Text style={styles.modeText}>{getModeLabel(log.mode)}</Text>
@@ -38,7 +54,7 @@ function GameLogCard({ log, expanded, onToggle }: { log: GameLog; expanded: bool
                     <Text style={styles.dateText}>{formatDate(log.date)}</Text>
                     <Text style={styles.movesCount}>{log.moves.length} moves</Text>
                 </View>
-            </TouchableOpacity>
+            </Pressable>
 
             {expanded && (
                 <View style={styles.movesContainer}>
@@ -66,7 +82,7 @@ export function HistoryScreen({ onBack }: HistoryScreenProps): React.JSX.Element
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <GlowBackground>
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.title}>History Logs</Text>
@@ -91,45 +107,36 @@ export function HistoryScreen({ onBack }: HistoryScreenProps): React.JSX.Element
                             ))}
                         </ScrollView>
 
-                        <TouchableOpacity style={styles.clearBtn} onPress={clearLogs}>
-                            <Text style={styles.clearBtnText}>Clear All Logs</Text>
-                        </TouchableOpacity>
+                        <Button label="Clear All Logs" variant="danger" onPress={clearLogs} style={styles.clearBtn} />
                     </>
                 )}
 
-                <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+                <Pressable style={styles.backBtn} onPress={onBack}>
                     <Text style={styles.backBtnText}>← Back to Menu</Text>
-                </TouchableOpacity>
+                </Pressable>
             </View>
-        </SafeAreaView>
+        </GlowBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#050B14',
-    },
     container: {
         flex: 1,
-        padding: 20,
+        padding: spacing.xl,
     },
     header: {
         alignItems: 'center',
-        marginBottom: 20,
-        marginTop: 10,
+        marginBottom: spacing.lg,
+        marginTop: spacing.sm,
     },
     title: {
-        fontSize: 32,
-        fontWeight: '900',
-        color: '#F8FAFC',
-        letterSpacing: 2,
+        ...typography.titleSmall,
+        color: colors.textPrimary,
     },
     subtitle: {
-        fontSize: 13,
-        color: '#94A3B8',
-        marginTop: 6,
-        fontWeight: '600',
+        ...typography.subtitle,
+        color: colors.textSecondary,
+        marginTop: spacing.xs,
     },
     emptyContainer: {
         flex: 1,
@@ -138,33 +145,36 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 18,
-        color: '#64748B',
+        color: colors.textMuted,
         fontWeight: '700',
     },
     emptySubtext: {
         fontSize: 13,
-        color: '#475569',
-        marginTop: 6,
+        color: colors.textFaint,
+        marginTop: spacing.xs,
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 20,
-        gap: 12,
+        paddingBottom: spacing.lg,
+        gap: spacing.md,
     },
     card: {
-        backgroundColor: '#151E32',
-        borderRadius: 14,
+        backgroundColor: colors.card,
+        borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: '#2A3655',
+        borderColor: colors.border,
         overflow: 'hidden',
     },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 14,
+        padding: spacing.md,
+    },
+    cardHeaderPressed: {
+        backgroundColor: colors.cardElevated,
     },
     cardHeaderLeft: {
         gap: 2,
@@ -179,35 +189,35 @@ const styles = StyleSheet.create({
     },
     modeText: {
         fontSize: 11,
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontWeight: '600',
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     dateText: {
         fontSize: 12,
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontWeight: '600',
     },
     movesCount: {
         fontSize: 11,
-        color: '#64748B',
+        color: colors.textMuted,
         fontWeight: '600',
     },
     movesContainer: {
         borderTopWidth: 1,
-        borderTopColor: '#2A3655',
-        padding: 12,
-        gap: 6,
+        borderTopColor: colors.border,
+        padding: spacing.md,
+        gap: spacing.sm,
     },
     moveRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: spacing.md,
     },
     moveNumber: {
         fontSize: 12,
-        color: '#64748B',
+        color: colors.textMuted,
         fontWeight: '700',
         width: 24,
     },
@@ -217,10 +227,10 @@ const styles = StyleSheet.create({
         width: 20,
     },
     textX: {
-        color: '#00E5FF',
+        color: colors.cyan,
     },
     textO: {
-        color: '#FF007F',
+        color: colors.pink,
     },
     movePosition: {
         fontSize: 13,
@@ -229,25 +239,17 @@ const styles = StyleSheet.create({
     },
     clearBtn: {
         alignSelf: 'center',
-        marginTop: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#FF007F',
-    },
-    clearBtnText: {
-        fontSize: 13,
-        color: '#FF007F',
-        fontWeight: '700',
+        marginTop: spacing.md,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.lg,
     },
     backBtn: {
         alignSelf: 'center',
-        marginTop: 16,
+        marginTop: spacing.lg,
     },
     backBtnText: {
         fontSize: 14,
-        color: '#64748B',
+        color: colors.textMuted,
         fontWeight: '600',
     },
 });

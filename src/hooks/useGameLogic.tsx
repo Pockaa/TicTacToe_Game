@@ -187,14 +187,21 @@ export function useGameLogic(options?: UseGameLogicOptions): GameActions {
     }, []);
 
     const statusMessage: string = useMemo((): string => {
+        // In single-player, the AI is always 'O' and the human is 'X'.
         if (winner) {
+            if (isSinglePlayer) {
+                return winner === 'O' ? 'AI Wins!' : 'You Win!';
+            }
             return `Player ${winner} Wins!`;
         }
         if (isDraw) {
             return "It's a Draw!";
         }
+        if (isSinglePlayer) {
+            return currentPlayer === 'O' ? 'AI is thinking…' : 'Your Turn';
+        }
         return `Player ${currentPlayer}'s Turn`;
-    }, [winner, isDraw, currentPlayer]);
+    }, [winner, isDraw, currentPlayer, isSinglePlayer]);
 
     return {
         gameState,

@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { Board } from '../components/Board';
 import { GameInfo } from '../components/GameInfo';
+import { GlowBackground } from '../components/GlowBackground';
+import { ScoreCard } from '../components/ScoreCard';
 import { useGameHistory } from '../context/GameHistoryContext';
 import { GameMode } from '../types';
+import { colors, spacing, radius, typography, shadows, withAlpha } from '../theme';
 
 interface GameScreenProps {
     onBack?: () => void;
@@ -15,7 +17,7 @@ interface GameScreenProps {
 export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.JSX.Element {
     const { addLog } = useGameHistory();
 
-    const { 
+    const {
         gameState, handlePress, resetGame, statusMessage,
         scores, history, currentStep, undo, redo,
         isSinglePlayer, toggleSinglePlayer
@@ -26,56 +28,55 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
         },
     });
 
+    const canUndo = currentStep > 0;
+    const canRedo = currentStep < history.length - 1;
+
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <GlowBackground>
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.title}>Tic-Tac-Toe</Text>
                     <Text style={styles.subtitle}>
-                        IT Major Elective 4 — Game Development
+                        {mode === 'ai' ? 'You vs AI (Minimax)' : 'Local 2-Player'}
                     </Text>
                 </View>
 
                 {/* Score Tracker */}
-                <View style={styles.scoreBoard}>
-                    <View style={[styles.scoreCard, styles.cardX]}>
-                        <Text style={styles.scoreLabel}>Player X</Text>
-                        <Text style={[styles.scoreValue, styles.textX]}>{scores.X}</Text>
-                    </View>
-                    <View style={[styles.scoreCard, styles.cardDraw]}>
-                        <Text style={styles.scoreLabel}>Draws</Text>
-                        <Text style={styles.scoreValue}>{scores.draws}</Text>
-                    </View>
-                    <View style={[styles.scoreCard, styles.cardO]}>
-                        <Text style={styles.scoreLabel}>{isSinglePlayer ? 'AI (O)' : 'Player O'}</Text>
-                        <Text style={[styles.scoreValue, styles.textO]}>{scores.O}</Text>
-                    </View>
+                <View style={styles.scoreRow}>
+                    <ScoreCard label="Player X" value={scores.X} accent={colors.cyan} valueAccent={colors.cyan} />
+                    <ScoreCard label="Draws" value={scores.draws} accent={colors.amber} />
+                    <ScoreCard
+                        label={isSinglePlayer ? 'AI (O)' : 'Player O'}
+                        value={scores.O}
+                        accent={colors.pink}
+                        valueAccent={colors.pink}
+                    />
                 </View>
 
                 {/* Controls */}
                 <View style={styles.controls}>
-                    <TouchableOpacity 
-                        onPress={undo} 
-                        disabled={currentStep === 0} 
-                        style={[styles.controlBtn, currentStep === 0 && styles.disabledBtn, { borderTopLeftRadius: 10, borderBottomLeftRadius: 10 }]}
+                    <Pressable
+                        onPress={undo}
+                        disabled={!canUndo}
+                        style={({ pressed }) => [styles.controlBtn, !canUndo && styles.disabledBtn, pressed && styles.controlPressed]}
                     >
                         <Text style={styles.controlText}>Undo</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                     {mode === 'local' && (
-                        <TouchableOpacity 
-                            onPress={toggleSinglePlayer} 
-                            style={[styles.controlBtn, { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#e2e8f0' }]}
+                        <Pressable
+                            onPress={toggleSinglePlayer}
+                            style={({ pressed }) => [styles.controlBtn, styles.controlDivider, pressed && styles.controlPressed]}
                         >
                             <Text style={styles.controlText}>{isSinglePlayer ? 'Play vs Human' : 'Play vs AI'}</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     )}
-                    <TouchableOpacity 
-                        onPress={redo} 
-                        disabled={currentStep === history.length - 1} 
-                        style={[styles.controlBtn, currentStep === history.length - 1 && styles.disabledBtn, { borderTopRightRadius: 10, borderBottomRightRadius: 10 }]}
+                    <Pressable
+                        onPress={redo}
+                        disabled={!canRedo}
+                        style={({ pressed }) => [styles.controlBtn, !canRedo && styles.disabledBtn, pressed && styles.controlPressed]}
                     >
                         <Text style={styles.controlText}>Redo</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                 </View>
 
                 <GameInfo
@@ -96,126 +97,71 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
                 </Text>
 
                 {onBack && (
-                    <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+                    <Pressable style={styles.backBtn} onPress={onBack}>
                         <Text style={styles.backBtnText}>← Back to Menu</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                 )}
             </View>
-        </SafeAreaView>
+        </GlowBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#050B14',
-    },
     container: {
         flex: 1,
         alignItems: 'center',
-        padding: 20,
+        padding: spacing.xl,
     },
     header: {
         alignItems: 'center',
-        marginBottom: 20,
-        marginTop: 10,
+        marginBottom: spacing.xl,
+        marginTop: spacing.sm,
     },
     title: {
-        fontSize: 38,
-        fontWeight: '900',
-        color: '#F8FAFC',
-        letterSpacing: 2,
-        textShadowColor: 'rgba(255, 255, 255, 0.4)',
+        ...typography.titleSmall,
+        fontSize: 36,
+        color: colors.textPrimary,
+        textShadowColor: withAlpha(colors.cyan, 0.5),
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
+        textShadowRadius: 14,
     },
     subtitle: {
-        fontSize: 13,
-        color: '#94A3B8',
-        marginTop: 6,
-        fontWeight: '600',
-        letterSpacing: 0.5,
+        ...typography.subtitle,
+        color: colors.textSecondary,
+        marginTop: spacing.sm,
     },
-    scoreBoard: {
+    scoreRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        gap: spacing.sm,
         width: '100%',
-        maxWidth: 340,
-        marginBottom: 15,
-    },
-    scoreCard: {
-        flex: 1,
-        backgroundColor: '#151E32',
-        paddingVertical: 12,
-        paddingHorizontal: 8,
-        borderRadius: 16,
-        alignItems: 'center',
-        marginHorizontal: 5,
-        shadowColor: '#00E5FF',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-        borderWidth: 1,
-        borderColor: '#2A3655',
-    },
-    cardX: {
-        borderBottomWidth: 3,
-        borderBottomColor: '#00E5FF',
-    },
-    cardO: {
-        borderBottomWidth: 3,
-        borderBottomColor: '#FF007F',
-    },
-    cardDraw: {
-        borderBottomWidth: 3,
-        borderBottomColor: '#FBBF24',
-    },
-    scoreLabel: {
-        fontSize: 11,
-        color: '#94A3B8',
-        fontWeight: '700',
-        marginBottom: 6,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    scoreValue: {
-        fontSize: 26,
-        fontWeight: '900',
-        color: '#F8FAFC',
-    },
-    textX: {
-        color: '#00E5FF',
-        textShadowColor: 'rgba(0, 229, 255, 0.5)',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8,
-    },
-    textO: {
-        color: '#FF007F',
-        textShadowColor: 'rgba(255, 0, 127, 0.5)',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8,
+        maxWidth: 360,
+        marginBottom: spacing.lg,
     },
     controls: {
         flexDirection: 'row',
         width: '100%',
-        maxWidth: 340,
-        backgroundColor: '#151E32',
-        borderRadius: 12,
-        shadowColor: '#00E5FF',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-        marginBottom: 10,
+        maxWidth: 360,
+        backgroundColor: colors.card,
+        borderRadius: radius.md,
+        marginBottom: spacing.md,
         borderWidth: 1,
-        borderColor: '#2A3655',
+        borderColor: colors.border,
+        overflow: 'hidden',
+        ...shadows.card,
     },
     controlBtn: {
         flex: 1,
-        paddingVertical: 14,
+        paddingVertical: spacing.md,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    controlDivider: {
+        borderLeftWidth: 1,
+        borderRightWidth: 1,
+        borderColor: colors.border,
+    },
+    controlPressed: {
+        backgroundColor: colors.cardElevated,
     },
     disabledBtn: {
         opacity: 0.3,
@@ -223,23 +169,21 @@ const styles = StyleSheet.create({
     controlText: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#F8FAFC',
+        color: colors.textPrimary,
         letterSpacing: 0.5,
         textTransform: 'uppercase',
     },
     footer: {
-        marginTop: 35,
-        fontSize: 12,
-        color: '#64748B',
-        fontWeight: '500',
-        letterSpacing: 0.5,
+        ...typography.footer,
+        color: colors.textMuted,
+        marginTop: spacing.xxl,
     },
     backBtn: {
-        marginTop: 16,
+        marginTop: spacing.lg,
     },
     backBtnText: {
         fontSize: 14,
-        color: '#64748B',
+        color: colors.textMuted,
         fontWeight: '600',
     },
 });

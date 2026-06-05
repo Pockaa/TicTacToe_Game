@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, Dimensions, } from 'react-native';
 import { CellValue } from '../types';
+import { colors, withAlpha } from '../theme';
 
 const screenWidth: number = Dimensions.get('window').width;
 const maxBoardWidth: number = 400; // Cap the maximum board width
@@ -44,21 +45,21 @@ const styles = StyleSheet.create({
     square: {
         width: squareSize,
         height: squareSize,
-        backgroundColor: '#151E32',
+        backgroundColor: colors.card,
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 16,
         margin: 5,
-        shadowColor: '#00E5FF',
+        shadowColor: colors.cyan,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
         elevation: 2,
         borderWidth: 1,
-        borderColor: '#2A3655',
+        borderColor: colors.border,
     },
     squareFilled: {
-        backgroundColor: '#1C2841',
+        backgroundColor: colors.cardElevated,
     },
     squareText: {
         fontSize: squareSize * 0.55,
@@ -67,11 +68,11 @@ const styles = StyleSheet.create({
         textShadowRadius: 15,
     },
     textX: {
-        color: '#00E5FF',
-        textShadowColor: 'rgba(0, 229, 255, 0.6)',
+        color: colors.cyan,
+        textShadowColor: withAlpha(colors.cyan, 0.6),
     },
     textO: {
-        color: '#FF007F',
-        textShadowColor: 'rgba(255, 0, 127, 0.6)',
+        color: colors.pink,
+        textShadowColor: withAlpha(colors.pink, 0.6),
     },
 });
