@@ -1,9 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet } from 'react-native';
 import { Board } from '../components/Board';
+import { GlowBackground } from '../components/GlowBackground';
+import { ScoreCard } from '../components/ScoreCard';
+import { StatusBadge, StatusTone } from '../components/StatusBadge';
+import { Button } from '../components/Button';
 import { MultiplayerState } from '../hooks/useMultiplayerGame';
 import { GameState } from '../types';
+import { colors, spacing, radius, typography } from '../theme';
 
 interface MultiplayerGameScreenProps {
     state: MultiplayerState;
@@ -25,14 +29,15 @@ export function MultiplayerGameScreen({ state, onPress, onReset, onLeave }: Mult
     };
 
     const isMyTurn = currentPlayer === myPlayer && status === 'playing';
+    const tone: StatusTone = winner ? 'winner' : isDraw ? 'draw' : isMyTurn ? 'turn' : 'default';
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <GlowBackground>
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.title}>Tic-Tac-Toe</Text>
                     <View style={styles.roomInfo}>
-                        <Text style={styles.roomLabel}>Room Code:</Text>
+                        <Text style={styles.roomLabel}>Room Code</Text>
                         <Text style={styles.roomCode}>{roomCode}</Text>
                     </View>
                 </View>
@@ -45,31 +50,27 @@ export function MultiplayerGameScreen({ state, onPress, onReset, onLeave }: Mult
                 </View>
 
                 {/* Score Tracker */}
-                <View style={styles.scoreBoard}>
-                    <View style={[styles.scoreCard, styles.cardX, myPlayer === 'X' && styles.cardHighlight]}>
-                        <Text style={styles.scoreLabel}>{myPlayer === 'X' ? 'You (X)' : 'Opponent (X)'}</Text>
-                        <Text style={[styles.scoreValue, styles.textX]}>{scores.X}</Text>
-                    </View>
-                    <View style={[styles.scoreCard, styles.cardDraw]}>
-                        <Text style={styles.scoreLabel}>Draws</Text>
-                        <Text style={styles.scoreValue}>{scores.draws}</Text>
-                    </View>
-                    <View style={[styles.scoreCard, styles.cardO, myPlayer === 'O' && styles.cardHighlight]}>
-                        <Text style={styles.scoreLabel}>{myPlayer === 'O' ? 'You (O)' : 'Opponent (O)'}</Text>
-                        <Text style={[styles.scoreValue, styles.textO]}>{scores.O}</Text>
-                    </View>
+                <View style={styles.scoreRow}>
+                    <ScoreCard
+                        label={myPlayer === 'X' ? 'You (X)' : 'Opponent (X)'}
+                        value={scores.X}
+                        accent={colors.cyan}
+                        valueAccent={colors.cyan}
+                        highlight={myPlayer === 'X'}
+                    />
+                    <ScoreCard label="Draws" value={scores.draws} accent={colors.amber} />
+                    <ScoreCard
+                        label={myPlayer === 'O' ? 'You (O)' : 'Opponent (O)'}
+                        value={scores.O}
+                        accent={colors.pink}
+                        valueAccent={colors.pink}
+                        highlight={myPlayer === 'O'}
+                    />
                 </View>
 
                 {/* Status */}
                 <View style={styles.statusContainer}>
-                    <Text style={[
-                        styles.status,
-                        winner && styles.statusWinner,
-                        isDraw && styles.statusDraw,
-                        isMyTurn && styles.statusMyTurn,
-                    ]}>
-                        {statusMessage}
-                    </Text>
+                    <StatusBadge message={statusMessage} tone={tone} size="md" />
                     {status === 'waiting' && (
                         <Text style={styles.waitingHint}>Share the room code with your friend</Text>
                     )}
@@ -84,200 +85,100 @@ export function MultiplayerGameScreen({ state, onPress, onReset, onLeave }: Mult
                 {/* Game Over Actions */}
                 {gameOver && (
                     <View style={styles.gameOverActions}>
-                        <TouchableOpacity style={styles.resetBtn} onPress={onReset}>
-                            <Text style={styles.resetBtnText}>Play Again</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.menuBtn} onPress={onLeave}>
-                            <Text style={styles.menuBtnText}>Main Menu</Text>
-                        </TouchableOpacity>
+                        <Button label="Play Again" variant="primary" onPress={onReset} />
+                        <Button label="Main Menu" variant="ghost" onPress={onLeave} />
                     </View>
                 )}
 
                 {!gameOver && (
-                    <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
-                        <Text style={styles.leaveBtnText}>Leave Room</Text>
-                    </TouchableOpacity>
+                    <Button label="Leave Room" variant="danger" onPress={onLeave} style={styles.leaveBtn} />
                 )}
             </View>
-        </SafeAreaView>
+        </GlowBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#050B14',
-    },
     container: {
         flex: 1,
         alignItems: 'center',
-        padding: 20,
+        padding: spacing.xl,
     },
     header: {
         alignItems: 'center',
-        marginBottom: 10,
-        marginTop: 10,
+        marginBottom: spacing.sm,
+        marginTop: spacing.sm,
     },
     title: {
-        fontSize: 32,
-        fontWeight: '900',
-        color: '#F8FAFC',
-        letterSpacing: 2,
-        textShadowColor: 'rgba(255, 255, 255, 0.4)',
+        ...typography.titleSmall,
+        color: colors.textPrimary,
+        textShadowColor: 'rgba(0, 229, 255, 0.5)',
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
+        textShadowRadius: 12,
     },
     roomInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 8,
-        backgroundColor: '#151E32',
-        paddingVertical: 6,
-        paddingHorizontal: 14,
-        borderRadius: 20,
+        gap: spacing.sm,
+        marginTop: spacing.sm,
+        backgroundColor: colors.card,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.pill,
         borderWidth: 1,
-        borderColor: '#2A3655',
+        borderColor: colors.border,
     },
     roomLabel: {
         fontSize: 12,
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontWeight: '600',
-        marginRight: 6,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     roomCode: {
         fontSize: 16,
         fontWeight: '900',
-        color: '#00E5FF',
+        color: colors.cyan,
         letterSpacing: 3,
     },
     playerInfo: {
-        marginBottom: 12,
+        marginBottom: spacing.md,
     },
     youAre: {
         fontSize: 16,
-        color: '#F8FAFC',
+        color: colors.textPrimary,
         fontWeight: '700',
-    },
-    scoreBoard: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-        maxWidth: 340,
-        marginBottom: 12,
-    },
-    scoreCard: {
-        flex: 1,
-        backgroundColor: '#151E32',
-        paddingVertical: 10,
-        paddingHorizontal: 6,
-        borderRadius: 16,
-        alignItems: 'center',
-        marginHorizontal: 5,
-        borderWidth: 1,
-        borderColor: '#2A3655',
-    },
-    cardX: {
-        borderBottomWidth: 3,
-        borderBottomColor: '#00E5FF',
-    },
-    cardO: {
-        borderBottomWidth: 3,
-        borderBottomColor: '#FF007F',
-    },
-    cardDraw: {
-        borderBottomWidth: 3,
-        borderBottomColor: '#FBBF24',
-    },
-    cardHighlight: {
-        shadowColor: '#00E5FF',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 6,
-    },
-    scoreLabel: {
-        fontSize: 10,
-        color: '#94A3B8',
-        fontWeight: '700',
-        marginBottom: 4,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    scoreValue: {
-        fontSize: 22,
-        fontWeight: '900',
-        color: '#F8FAFC',
     },
     textX: {
-        color: '#00E5FF',
-        textShadowColor: 'rgba(0, 229, 255, 0.5)',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8,
+        color: colors.cyan,
+        fontWeight: '900',
     },
     textO: {
-        color: '#FF007F',
-        textShadowColor: 'rgba(255, 0, 127, 0.5)',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8,
+        color: colors.pink,
+        fontWeight: '900',
+    },
+    scoreRow: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+        width: '100%',
+        maxWidth: 360,
+        marginBottom: spacing.md,
     },
     statusContainer: {
         alignItems: 'center',
-        marginBottom: 10,
-    },
-    status: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#F8FAFC',
-    },
-    statusWinner: {
-        color: '#4ADE80',
-    },
-    statusDraw: {
-        color: '#FBBF24',
-    },
-    statusMyTurn: {
-        color: '#00E5FF',
+        marginBottom: spacing.md,
     },
     waitingHint: {
         fontSize: 12,
-        color: '#64748B',
-        marginTop: 4,
-    },
-    resetBtn: {
-        marginTop: 16,
-        backgroundColor: '#00E5FF',
-        paddingVertical: 14,
-        paddingHorizontal: 32,
-        borderRadius: 12,
-    },
-    resetBtnText: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#050B14',
+        color: colors.textMuted,
+        marginTop: spacing.xs,
     },
     gameOverActions: {
         alignItems: 'center',
-        gap: 12,
-        marginTop: 16,
-    },
-    menuBtn: {
-        paddingVertical: 10,
-        paddingHorizontal: 24,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#64748B',
-    },
-    menuBtnText: {
-        fontSize: 14,
-        color: '#94A3B8',
-        fontWeight: '700',
+        gap: spacing.md,
+        marginTop: spacing.lg,
     },
     leaveBtn: {
-        marginTop: 20,
-    },
-    leaveBtnText: {
-        fontSize: 14,
-        color: '#FF007F',
-        fontWeight: '700',
+        marginTop: spacing.xl,
     },
 });

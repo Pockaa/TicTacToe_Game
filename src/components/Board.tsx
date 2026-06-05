@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Square } from './Square';
 import { Board as BoardType } from '../types';
+import { colors } from '../theme';
 
 interface BoardProps {
     board: BoardType
@@ -46,17 +47,17 @@ Board.displayName = 'Board';
 
 const styles = StyleSheet.create({
     board: {
-        backgroundColor: '#0B0F19',
+        backgroundColor: colors.bgElevated,
         borderRadius: 24,
         padding: 12,
         // Glowing shadow effect
-        shadowColor: '#00E5FF',
+        shadowColor: colors.cyan,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.15,
         shadowRadius: 20,
         elevation: 10,
         borderWidth: 1,
-        borderColor: '#151E32',
+        borderColor: colors.card,
     },
     row: {
         flexDirection: 'row',
