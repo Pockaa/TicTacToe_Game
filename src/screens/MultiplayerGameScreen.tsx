@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Board } from '../components/Board';
 import { GlowBackground } from '../components/GlowBackground';
 import { ScoreCard } from '../components/ScoreCard';
 import { StatusBadge, StatusTone } from '../components/StatusBadge';
+import { GameOverModal } from '../components/GameOverModal';
 import { Button } from '../components/Button';
 import { MultiplayerState } from '../hooks/useMultiplayerGame';
 import { GameState } from '../types';
-import { colors, spacing, radius, typography } from '../theme';
+import { colors, spacing, radius, typography, shadows } from '../theme';
 
 interface MultiplayerGameScreenProps {
     state: MultiplayerState;
@@ -26,6 +27,18 @@ export function MultiplayerGameScreen({ state, onPress, onReset, onLeave }: Mult
         isDraw,
         gameOver,
         moveCount: board.filter(c => c !== null).length,
+    };
+
+    const [isReviewing, setIsReviewing] = React.useState(false);
+
+    const handlePlayAgain = () => {
+        setIsReviewing(false);
+        onReset();
+    };
+
+    const handleLeave = () => {
+        setIsReviewing(false);
+        onLeave();
     };
 
     const isMyTurn = currentPlayer === myPlayer && status === 'playing';
@@ -70,11 +83,40 @@ export function MultiplayerGameScreen({ state, onPress, onReset, onLeave }: Mult
 
                 {/* Status */}
                 <View style={styles.statusContainer}>
-                    <StatusBadge message={statusMessage} tone={tone} size="md" />
+                    {!gameOver && (
+                        <StatusBadge message={statusMessage} tone={tone} size="md" />
+                    )}
                     {status === 'waiting' && (
                         <Text style={styles.waitingHint}>Share the room code with your friend</Text>
                     )}
                 </View>
+
+                {/* If reviewing the board, show the review toolbar */}
+                {isReviewing && (
+                    <View style={styles.reviewBar}>
+                        <Text style={styles.reviewTitle}>Reviewing Board</Text>
+                        <View style={styles.reviewActions}>
+                            <Pressable 
+                                style={({ pressed }) => [styles.reviewBtn, pressed && styles.reviewBtnPressed]}
+                                onPress={() => setIsReviewing(false)}
+                            >
+                                <Text style={styles.reviewBtnText}>Show Results</Text>
+                            </Pressable>
+                            <Pressable 
+                                style={({ pressed }) => [styles.reviewBtn, styles.reviewBtnPrimary, pressed && styles.reviewBtnPressed]}
+                                onPress={handlePlayAgain}
+                            >
+                                <Text style={styles.reviewBtnTextPrimary}>Play Again</Text>
+                            </Pressable>
+                            <Pressable 
+                                style={({ pressed }) => [styles.reviewBtn, pressed && styles.reviewBtnPressed]}
+                                onPress={handleLeave}
+                            >
+                                <Text style={styles.reviewBtnText}>Leave</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                )}
 
                 <Board
                     board={board}
@@ -82,17 +124,20 @@ export function MultiplayerGameScreen({ state, onPress, onReset, onLeave }: Mult
                     gameOver={gameOver || !isMyTurn}
                 />
 
-                {/* Game Over Actions */}
-                {gameOver && (
-                    <View style={styles.gameOverActions}>
-                        <Button label="Play Again" variant="primary" onPress={onReset} />
-                        <Button label="Main Menu" variant="ghost" onPress={onLeave} />
-                    </View>
-                )}
-
                 {!gameOver && (
                     <Button label="Leave Room" variant="danger" onPress={onLeave} style={styles.leaveBtn} />
                 )}
+
+                <GameOverModal
+                    visible={gameOver && !isReviewing}
+                    statusMessage={statusMessage}
+                    winner={winner}
+                    isDraw={isDraw}
+                    moveCount={board.filter(c => c !== null).length}
+                    onPlayAgain={handlePlayAgain}
+                    onMainMenu={handleLeave}
+                    onReviewBoard={() => setIsReviewing(true)}
+                />
             </View>
         </GlowBackground>
     );
@@ -102,15 +147,16 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         alignItems: 'center',
-        padding: spacing.xl,
+        padding: spacing.lg,
     },
     header: {
         alignItems: 'center',
-        marginBottom: spacing.sm,
-        marginTop: spacing.sm,
+        marginBottom: spacing.xs,
+        marginTop: spacing.xs,
     },
     title: {
         ...typography.titleSmall,
+        fontSize: 32,
         color: colors.textPrimary,
         textShadowColor: 'rgba(0, 229, 255, 0.5)',
         textShadowOffset: { width: 0, height: 0 },
@@ -120,32 +166,32 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.sm,
-        marginTop: spacing.sm,
+        marginTop: spacing.xs,
         backgroundColor: colors.card,
-        paddingVertical: spacing.sm,
+        paddingVertical: spacing.xs,
         paddingHorizontal: spacing.md,
         borderRadius: radius.pill,
         borderWidth: 1,
         borderColor: colors.border,
     },
     roomLabel: {
-        fontSize: 12,
+        fontSize: 11,
         color: colors.textSecondary,
         fontWeight: '600',
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     roomCode: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '900',
         color: colors.cyan,
         letterSpacing: 3,
     },
     playerInfo: {
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
     },
     youAre: {
-        fontSize: 16,
+        fontSize: 14,
         color: colors.textPrimary,
         fontWeight: '700',
     },
@@ -162,11 +208,11 @@ const styles = StyleSheet.create({
         gap: spacing.sm,
         width: '100%',
         maxWidth: 360,
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
     },
     statusContainer: {
         alignItems: 'center',
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
     },
     waitingHint: {
         fontSize: 12,
@@ -175,10 +221,62 @@ const styles = StyleSheet.create({
     },
     gameOverActions: {
         alignItems: 'center',
-        gap: spacing.md,
-        marginTop: spacing.lg,
+        gap: spacing.sm,
+        marginTop: spacing.md,
     },
     leaveBtn: {
-        marginTop: spacing.xl,
+        marginTop: spacing.md,
+    },
+    reviewBar: {
+        width: '100%',
+        maxWidth: 360,
+        backgroundColor: colors.card,
+        borderRadius: radius.md,
+        padding: spacing.md,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginBottom: spacing.sm,
+        ...shadows.card,
+    },
+    reviewTitle: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: spacing.xs,
+    },
+    reviewActions: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+        width: '100%',
+    },
+    reviewBtn: {
+        flex: 1,
+        paddingVertical: spacing.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: radius.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: 'transparent',
+    },
+    reviewBtnPrimary: {
+        backgroundColor: colors.cyan,
+        borderColor: colors.cyan,
+    },
+    reviewBtnPressed: {
+        opacity: 0.8,
+    },
+    reviewBtnText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    reviewBtnTextPrimary: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: colors.bg,
     },
 });

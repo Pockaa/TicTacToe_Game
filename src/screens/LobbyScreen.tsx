@@ -102,27 +102,27 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         alignItems: 'center',
-        padding: spacing.xl,
+        padding: spacing.lg,
         justifyContent: 'center',
     },
     header: {
         alignItems: 'center',
-        marginBottom: spacing.xxl,
+        marginBottom: spacing.lg,
     },
     title: {
         ...typography.titleSmall,
-        fontSize: 36,
+        fontSize: 32,
         color: colors.textPrimary,
-        marginTop: spacing.md,
+        marginTop: spacing.sm,
         textShadowColor: withAlpha(colors.cyan, 0.5),
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: 14,
     },
     subtitle: {
         ...typography.subtitle,
-        fontSize: 14,
+        fontSize: 13,
         color: colors.textSecondary,
-        marginTop: spacing.sm,
+        marginTop: spacing.xs,
     },
     menuContainer: {
         width: '100%',

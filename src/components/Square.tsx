@@ -1,12 +1,7 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Dimensions, } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, useWindowDimensions, } from 'react-native';
 import { CellValue } from '../types';
 import { colors, withAlpha } from '../theme';
-
-const screenWidth: number = Dimensions.get('window').width;
-const maxBoardWidth: number = 400; // Cap the maximum board width
-const boardWidth: number = Math.min(screenWidth * 0.85, maxBoardWidth);
-const squareSize: number = boardWidth / 3 - 8;
 
 interface SquareProps {
     value: CellValue;
@@ -15,10 +10,17 @@ interface SquareProps {
 }
 
 export const Square: React.FC<SquareProps> = React.memo(({ value, onPress, disabled }) => {
+    const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+    // Cap board width based on both screen width and height to guarantee it fits entirely
+    const maxBoardWidth = Math.min(320, screenHeight * 0.35);
+    const boardWidth = Math.min(screenWidth * 0.85, maxBoardWidth);
+    const squareSize = boardWidth / 3 - 8;
+
     return (
         <TouchableOpacity
             style={[
                 styles.square,
+                { width: squareSize, height: squareSize },
                 value !== null && styles.squareFilled,
             ]}
             onPress={onPress}
@@ -28,6 +30,7 @@ export const Square: React.FC<SquareProps> = React.memo(({ value, onPress, disab
             <Text
                 style={[
                     styles.squareText,
+                    { fontSize: squareSize * 0.55 },
                     value === 'X' && styles.textX,
                     value === 'O' && styles.textO,
                 ]}
@@ -43,8 +46,6 @@ Square.displayName = 'Square';
 
 const styles = StyleSheet.create({
     square: {
-        width: squareSize,
-        height: squareSize,
         backgroundColor: colors.card,
         justifyContent: 'center',
         alignItems: 'center',
@@ -62,7 +63,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.cardElevated,
     },
     squareText: {
-        fontSize: squareSize * 0.55,
         fontWeight: '900',
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: 15,
