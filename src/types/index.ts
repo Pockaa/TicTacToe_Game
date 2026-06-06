@@ -40,6 +40,7 @@ export interface MoveEntry {
 }
 
 export type GameMode = 'local' | 'ai' | 'online';
+export type AiDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface GameLog {
     id: string;

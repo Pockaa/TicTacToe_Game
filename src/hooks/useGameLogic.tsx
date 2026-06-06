@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Board, GameState, GameActions, Player, CellValue, Scores, MoveEntry, GameMode } from '../types';
+import { Board, GameState, GameActions, Player, CellValue, Scores, MoveEntry, GameMode, AiDifficulty } from '../types';
 
 const WINNING_COMBINATIONS: readonly number[][] = [
     [0, 1, 2], // Top row
@@ -45,11 +45,13 @@ function checkDraw(moveCount: number, winner: Player | null): boolean {
 
 interface UseGameLogicOptions {
     mode?: GameMode;
+    aiDifficulty?: AiDifficulty;
     onGameEnd?: (winner: Player | null, isDraw: boolean, moves: MoveEntry[]) => void;
 }
 
 export function useGameLogic(options?: UseGameLogicOptions): GameActions {
     const mode = options?.mode ?? 'local';
+    const aiDifficulty = options?.aiDifficulty ?? 'hard';
     const onGameEnd = options?.onGameEnd;
 
     const [scores, setScores] = useState<Scores>({ X: 0, O: 0, draws: 0 });
@@ -146,15 +148,16 @@ export function useGameLogic(options?: UseGameLogicOptions): GameActions {
 
     useEffect(() => {
         if (isSinglePlayer && currentPlayer === 'O' && !gameOver) {
+            const delay = aiDifficulty === 'easy' ? 400 : aiDifficulty === 'medium' ? 500 : 600;
             const timer = setTimeout(() => {
-                const aiMove = getBestMove(currentBoard, 'O');
+                const aiMove = getAiMove(currentBoard, 'O', aiDifficulty);
                 if (aiMove !== -1) {
                     makeAiMove(aiMove);
                 }
-            }, 600); // 600ms thinking time
+            }, delay);
             return () => clearTimeout(timer);
         }
-    }, [isSinglePlayer, currentPlayer, gameOver, currentBoard, makeAiMove]);
+    }, [isSinglePlayer, currentPlayer, gameOver, currentBoard, makeAiMove, aiDifficulty]);
 
     const resetGame = useCallback((): void => {
         setHistory([EMPTY_BOARD]);
@@ -273,4 +276,64 @@ function getBestMove(board: Board, aiPlayer: Player): number {
         }
     }
     return move;
+}
+
+/** Easy AI: picks a random empty cell. */
+function getRandomMove(board: Board): number {
+    const emptyCells: number[] = [];
+    for (let i = 0; i < 9; i++) {
+        if (board[i] === null) emptyCells.push(i);
+    }
+    if (emptyCells.length === 0) return -1;
+    return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+}
+
+/**
+ * Selects an AI move based on difficulty.
+ * - easy:   Purely random valid move.
+ * - medium: 50% chance minimax, 50% random. Always blocks immediate wins/losses.
+ * - hard:   Pure minimax (unbeatable).
+ */
+function getAiMove(board: Board, aiPlayer: Player, difficulty: AiDifficulty): number {
+    if (difficulty === 'easy') {
+        return getRandomMove(board);
+    }
+
+    if (difficulty === 'hard') {
+        return getBestMove(board, aiPlayer);
+    }
+
+    // Medium: block immediate threats and take wins, otherwise 50/50
+    const humanPlayer = aiPlayer === 'X' ? 'O' : 'X';
+    const newBoard = [...board] as Board;
+
+    // Check if AI can win in one move
+    for (let i = 0; i < 9; i++) {
+        if (newBoard[i] === null) {
+            newBoard[i] = aiPlayer;
+            if (checkWinner(newBoard) === aiPlayer) {
+                newBoard[i] = null;
+                return i; // Take the win
+            }
+            newBoard[i] = null;
+        }
+    }
+
+    // Check if human can win in one move and block
+    for (let i = 0; i < 9; i++) {
+        if (newBoard[i] === null) {
+            newBoard[i] = humanPlayer;
+            if (checkWinner(newBoard) === humanPlayer) {
+                newBoard[i] = null;
+                return i; // Block the win
+            }
+            newBoard[i] = null;
+        }
+    }
+
+    // 50% chance of optimal play, 50% random
+    if (Math.random() < 0.5) {
+        return getBestMove(board, aiPlayer);
+    }
+    return getRandomMove(board);
 }

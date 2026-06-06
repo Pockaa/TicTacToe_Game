@@ -191,7 +191,9 @@ export function useMultiplayerGame(onGameEnd?: (winner: Player | null, isDraw: b
 
         if (error) {
             setStatus('error');
-            setErrorMessage('Failed to create room. Try again.');
+            const detail = error.message || error.code || 'Unknown error';
+            setErrorMessage(`Failed to create room: ${detail}`);
+            console.error('Create room error:', error);
             return;
         }
 

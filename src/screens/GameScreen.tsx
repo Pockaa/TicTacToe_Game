@@ -7,15 +7,16 @@ import { GameOverModal } from '../components/GameOverModal';
 import { GlowBackground } from '../components/GlowBackground';
 import { ScoreCard } from '../components/ScoreCard';
 import { useGameHistory } from '../context/GameHistoryContext';
-import { GameMode } from '../types';
+import { GameMode, AiDifficulty } from '../types';
 import { colors, spacing, radius, typography, shadows, withAlpha } from '../theme';
 
 interface GameScreenProps {
     onBack?: () => void;
     mode?: GameMode;
+    aiDifficulty?: AiDifficulty;
 }
 
-export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.JSX.Element {
+export function GameScreen({ onBack, mode = 'local', aiDifficulty = 'hard' }: GameScreenProps): React.JSX.Element {
     const { addLog } = useGameHistory();
 
     const {
@@ -24,6 +25,7 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
         isSinglePlayer, toggleSinglePlayer
     } = useGameLogic({
         mode,
+        aiDifficulty,
         onGameEnd: (winner, isDraw, moves) => {
             addLog(mode, winner, isDraw, moves);
         },
@@ -45,7 +47,9 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
                 <View style={styles.header}>
                     <Text style={styles.title}>Tic-Tac-Toe</Text>
                     <Text style={styles.subtitle}>
-                        {mode === 'ai' ? 'You vs AI (Minimax)' : 'Local 2-Player'}
+                        {mode === 'ai'
+                            ? `You vs AI — ${aiDifficulty.charAt(0).toUpperCase() + aiDifficulty.slice(1)}`
+                            : 'Local 2-Player'}
                     </Text>
                 </View>
 
@@ -130,7 +134,10 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
                 />
 
                 <Text style={styles.footer}>
-                    {mode === 'ai' ? 'AI uses Minimax (Hard)' : 'Local PvP Mode'} • React Native + Expo
+                    {mode === 'ai'
+                        ? `AI Difficulty: ${aiDifficulty.charAt(0).toUpperCase() + aiDifficulty.slice(1)}`
+                        : 'Local PvP Mode'}
+                    {' '}• React Native + Expo
                 </Text>
 
                 {onBack && (
