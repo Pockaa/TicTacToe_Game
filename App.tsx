@@ -3,16 +3,19 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MenuScreen } from './src/screens/MenuScreen';
 import { GameScreen } from './src/screens/GameScreen';
+import { DifficultyScreen } from './src/screens/DifficultyScreen';
 import { LobbyScreen } from './src/screens/LobbyScreen';
 import { MultiplayerGameScreen } from './src/screens/MultiplayerGameScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { useMultiplayerGame } from './src/hooks/useMultiplayerGame';
 import { GameHistoryProvider, useGameHistory } from './src/context/GameHistoryContext';
+import { AiDifficulty } from './src/types';
 
-type Screen = 'menu' | 'local' | 'ai' | 'lobby' | 'multiplayer' | 'history';
+type Screen = 'menu' | 'local' | 'difficulty' | 'ai' | 'lobby' | 'multiplayer' | 'history';
 
 function AppContent(): React.JSX.Element {
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
+  const [aiDifficulty, setAiDifficulty] = useState<AiDifficulty>('hard');
   const { addLog } = useGameHistory();
 
   const handleMultiplayerGameEnd = useCallback((winner: any, isDraw: boolean, moves: any) => {
@@ -48,15 +51,24 @@ function AppContent(): React.JSX.Element {
         <MenuScreen
           onPlayLocal={() => setCurrentScreen('local')}
           onPlayOnline={() => setCurrentScreen('lobby')}
-          onPlayAI={() => setCurrentScreen('ai')}
+          onPlayAI={() => setCurrentScreen('difficulty')}
           onHistory={() => setCurrentScreen('history')}
         />
       )}
       {currentScreen === 'local' && (
         <GameScreen onBack={() => setCurrentScreen('menu')} mode="local" />
       )}
+      {currentScreen === 'difficulty' && (
+        <DifficultyScreen
+          onSelect={(diff) => {
+            setAiDifficulty(diff);
+            setCurrentScreen('ai');
+          }}
+          onBack={() => setCurrentScreen('menu')}
+        />
+      )}
       {currentScreen === 'ai' && (
-        <GameScreen onBack={() => setCurrentScreen('menu')} mode="ai" />
+        <GameScreen onBack={() => setCurrentScreen('difficulty')} mode="ai" aiDifficulty={aiDifficulty} />
       )}
       {currentScreen === 'lobby' && (
         <LobbyScreen
