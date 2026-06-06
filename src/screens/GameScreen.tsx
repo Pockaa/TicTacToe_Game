@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useGameLogic } from '../hooks/useGameLogic';
 import { Board } from '../components/Board';
 import { GameInfo } from '../components/GameInfo';
+import { GameOverModal } from '../components/GameOverModal';
 import { GlowBackground } from '../components/GlowBackground';
 import { ScoreCard } from '../components/ScoreCard';
 import { useGameHistory } from '../context/GameHistoryContext';
@@ -27,6 +28,13 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
             addLog(mode, winner, isDraw, moves);
         },
     });
+
+    const [isReviewing, setIsReviewing] = React.useState(false);
+
+    const handlePlayAgain = () => {
+        setIsReviewing(false);
+        resetGame();
+    };
 
     const canUndo = currentStep > 0;
     const canRedo = currentStep < history.length - 1;
@@ -57,23 +65,24 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
                 <View style={styles.controls}>
                     <Pressable
                         onPress={undo}
-                        disabled={!canUndo}
-                        style={({ pressed }) => [styles.controlBtn, !canUndo && styles.disabledBtn, pressed && styles.controlPressed]}
+                        disabled={!canUndo || gameState.gameOver}
+                        style={({ pressed }) => [styles.controlBtn, (!canUndo || gameState.gameOver) && styles.disabledBtn, pressed && styles.controlPressed]}
                     >
                         <Text style={styles.controlText}>Undo</Text>
                     </Pressable>
                     {mode === 'local' && (
                         <Pressable
                             onPress={toggleSinglePlayer}
-                            style={({ pressed }) => [styles.controlBtn, styles.controlDivider, pressed && styles.controlPressed]}
+                            disabled={gameState.gameOver}
+                            style={({ pressed }) => [styles.controlBtn, styles.controlDivider, gameState.gameOver && styles.disabledBtn, pressed && styles.controlPressed]}
                         >
                             <Text style={styles.controlText}>{isSinglePlayer ? 'Play vs Human' : 'Play vs AI'}</Text>
                         </Pressable>
                     )}
                     <Pressable
                         onPress={redo}
-                        disabled={!canRedo}
-                        style={({ pressed }) => [styles.controlBtn, !canRedo && styles.disabledBtn, pressed && styles.controlPressed]}
+                        disabled={!canRedo || gameState.gameOver}
+                        style={({ pressed }) => [styles.controlBtn, (!canRedo || gameState.gameOver) && styles.disabledBtn, pressed && styles.controlPressed]}
                     >
                         <Text style={styles.controlText}>Redo</Text>
                     </Pressable>
@@ -85,6 +94,34 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
                     onReset={resetGame}
                     onBackToMenu={onBack}
                 />
+
+                {isReviewing && (
+                    <View style={styles.reviewBar}>
+                        <Text style={styles.reviewTitle}>Reviewing Board</Text>
+                        <View style={styles.reviewActions}>
+                            <Pressable 
+                                style={({ pressed }) => [styles.reviewBtn, pressed && styles.reviewBtnPressed]}
+                                onPress={() => setIsReviewing(false)}
+                            >
+                                <Text style={styles.reviewBtnText}>Show Results</Text>
+                            </Pressable>
+                            <Pressable 
+                                style={({ pressed }) => [styles.reviewBtn, styles.reviewBtnPrimary, pressed && styles.reviewBtnPressed]}
+                                onPress={handlePlayAgain}
+                            >
+                                <Text style={styles.reviewBtnTextPrimary}>Play Again</Text>
+                            </Pressable>
+                            {onBack && (
+                                <Pressable 
+                                    style={({ pressed }) => [styles.reviewBtn, pressed && styles.reviewBtnPressed]}
+                                    onPress={onBack}
+                                >
+                                    <Text style={styles.reviewBtnText}>Menu</Text>
+                                </Pressable>
+                            )}
+                        </View>
+                    </View>
+                )}
 
                 <Board
                     board={gameState.board}
@@ -101,6 +138,17 @@ export function GameScreen({ onBack, mode = 'local' }: GameScreenProps): React.J
                         <Text style={styles.backBtnText}>← Back to Menu</Text>
                     </Pressable>
                 )}
+
+                <GameOverModal
+                    visible={gameState.gameOver && !isReviewing}
+                    statusMessage={statusMessage}
+                    winner={gameState.winner}
+                    isDraw={gameState.isDraw}
+                    moveCount={gameState.moveCount}
+                    onPlayAgain={handlePlayAgain}
+                    onMainMenu={onBack || (() => {})}
+                    onReviewBoard={() => setIsReviewing(true)}
+                />
             </View>
         </GlowBackground>
     );
@@ -110,16 +158,16 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         alignItems: 'center',
-        padding: spacing.xl,
+        padding: spacing.lg,
     },
     header: {
         alignItems: 'center',
-        marginBottom: spacing.xl,
-        marginTop: spacing.sm,
+        marginBottom: spacing.lg,
+        marginTop: spacing.xs,
     },
     title: {
         ...typography.titleSmall,
-        fontSize: 36,
+        fontSize: 32,
         color: colors.textPrimary,
         textShadowColor: withAlpha(colors.cyan, 0.5),
         textShadowOffset: { width: 0, height: 0 },
@@ -128,14 +176,14 @@ const styles = StyleSheet.create({
     subtitle: {
         ...typography.subtitle,
         color: colors.textSecondary,
-        marginTop: spacing.sm,
+        marginTop: spacing.xs,
     },
     scoreRow: {
         flexDirection: 'row',
         gap: spacing.sm,
         width: '100%',
         maxWidth: 360,
-        marginBottom: spacing.lg,
+        marginBottom: spacing.md,
     },
     controls: {
         flexDirection: 'row',
@@ -143,7 +191,7 @@ const styles = StyleSheet.create({
         maxWidth: 360,
         backgroundColor: colors.card,
         borderRadius: radius.md,
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
         borderWidth: 1,
         borderColor: colors.border,
         overflow: 'hidden',
@@ -176,14 +224,66 @@ const styles = StyleSheet.create({
     footer: {
         ...typography.footer,
         color: colors.textMuted,
-        marginTop: spacing.xxl,
+        marginTop: spacing.lg,
     },
     backBtn: {
-        marginTop: spacing.lg,
+        marginTop: spacing.md,
     },
     backBtnText: {
         fontSize: 14,
         color: colors.textMuted,
         fontWeight: '600',
+    },
+    reviewBar: {
+        width: '100%',
+        maxWidth: 360,
+        backgroundColor: colors.card,
+        borderRadius: radius.md,
+        padding: spacing.md,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginBottom: spacing.sm,
+        ...shadows.card,
+    },
+    reviewTitle: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: spacing.xs,
+    },
+    reviewActions: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+        width: '100%',
+    },
+    reviewBtn: {
+        flex: 1,
+        paddingVertical: spacing.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: radius.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: 'transparent',
+    },
+    reviewBtnPrimary: {
+        backgroundColor: colors.cyan,
+        borderColor: colors.cyan,
+    },
+    reviewBtnPressed: {
+        opacity: 0.8,
+    },
+    reviewBtnText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    reviewBtnTextPrimary: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: colors.bg,
     },
 });

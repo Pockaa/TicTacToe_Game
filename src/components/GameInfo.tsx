@@ -13,34 +13,26 @@ interface GameInfoProps {
 }
 
 export const GameInfo: React.FC<GameInfoProps> = React.memo(({ statusMessage, gameState, onReset, onBackToMenu }) => {
-    const tone: StatusTone = gameState.winner ? 'winner' : gameState.isDraw ? 'draw' : 'default';
+    if (gameState.gameOver) {
+        return null;
+    }
+
     const isX = gameState.currentPlayer === 'X';
 
     return (
         <View style={styles.container}>
-            <StatusBadge message={statusMessage} tone={tone} size="lg" style={styles.status} />
+            <StatusBadge message={statusMessage} tone="default" size="lg" style={styles.status} />
 
             <Text style={styles.moveCount}>
                 Moves: {gameState.moveCount} / 9
             </Text>
 
-            {!gameState.gameOver && (
-                <View style={styles.playerIndicator}>
-                    <View style={[styles.playerDot, isX ? styles.dotX : styles.dotO]} />
-                    <Text style={styles.playerLabel}>
-                        {isX ? 'Cyan (X)' : 'Pink (O)'}
-                    </Text>
-                </View>
-            )}
-
-            {gameState.gameOver && (
-                <View style={styles.gameOverActions}>
-                    <Button label="Play Again" variant="outline" accent={colors.cyan} onPress={onReset} />
-                    {onBackToMenu && (
-                        <Button label="Main Menu" variant="ghost" onPress={onBackToMenu} />
-                    )}
-                </View>
-            )}
+            <View style={styles.playerIndicator}>
+                <View style={[styles.playerDot, isX ? styles.dotX : styles.dotO]} />
+                <Text style={styles.playerLabel}>
+                    {isX ? 'Cyan (X)' : 'Pink (O)'}
+                </Text>
+            </View>
         </View>
     );
 });
@@ -50,16 +42,16 @@ GameInfo.displayName = 'GameInfo';
 const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
-        paddingVertical: spacing.lg,
-        minHeight: 100, // keep height consistent so layout doesn't jump
+        paddingVertical: spacing.md,
+        minHeight: 80, // keep height consistent so layout doesn't jump
     },
     status: {
-        marginBottom: spacing.sm,
+        marginBottom: spacing.xs,
     },
     moveCount: {
-        fontSize: 14,
+        fontSize: 13,
         color: colors.textSecondary,
-        marginBottom: spacing.sm,
+        marginBottom: spacing.xs,
         fontWeight: '600',
         letterSpacing: 1,
     },
@@ -69,7 +61,7 @@ const styles = StyleSheet.create({
         marginTop: spacing.xs,
         backgroundColor: colors.card,
         paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
+        paddingVertical: spacing.xs,
         borderRadius: radius.pill,
         borderWidth: 1,
         borderColor: colors.border,
